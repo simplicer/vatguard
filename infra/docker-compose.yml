@@ -1,0 +1,10 @@
+services:
+  vat-validator:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=${LOG_LEVEL:-info}

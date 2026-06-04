@@ -25,6 +25,14 @@ make run
 
 The server starts on `:8080` by default. Set the `PORT` environment variable to change.
 
+### Docker
+
+```bash
+make docker-build
+make docker-up
+make docker-down
+```
+
 ### Quick Test
 
 ```bash

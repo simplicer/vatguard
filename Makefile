@@ -1,4 +1,4 @@
-.PHONY: build run test clean lint fmt help
+.PHONY: build run test clean lint fmt help docker-build docker-up docker-down
 
 # Project
 MODULE     := github.com/antonio-villamarin/vat-validator
@@ -40,3 +40,12 @@ fmt: ## Format code
 
 lint: ## Vet the code
 	$(GO) vet ./...
+
+docker-build: ## Build Docker image
+	docker build -t vat-validator:$(VERSION) -f infra/docker/Dockerfile .
+
+docker-up: ## Start Docker container
+	cd infra && docker compose up -d
+
+docker-down: ## Stop Docker container
+	cd infra && docker compose down

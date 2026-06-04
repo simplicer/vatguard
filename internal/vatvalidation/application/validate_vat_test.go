@@ -30,7 +30,7 @@ func TestValidateVAT_ValidEUMember_VIESRegistered(t *testing.T) {
 		},
 	}
 
-	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "ESA12345674"}, vies)
+	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "ESA12345674", IncludeVIES: true}, vies)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestValidateVAT_ValidEUMember_VIESNotRegistered(t *testing.T) {
 		result: &VIESResult{Valid: false},
 	}
 
-	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "DE123456789"}, vies)
+	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "DE123456789", IncludeVIES: true}, vies)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestValidateVAT_ValidEUMember_VIESUnavailable(t *testing.T) {
 		err: errors.New("connection refused"),
 	}
 
-	resp, vErr := ValidateVAT(ValidateVATRequest{VATNumber: "DE123456789"}, vies)
+	resp, vErr := ValidateVAT(ValidateVATRequest{VATNumber: "DE123456789", IncludeVIES: true}, vies)
 	if vErr == nil {
 		t.Fatal("expected VIES unavailable error")
 	}
@@ -209,7 +209,7 @@ func TestValidateVAT_Greece_GR_UsesELForVIES(t *testing.T) {
 		result: &VIESResult{Valid: true, CompanyName: "GREEK CO"},
 	}
 
-	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "GR123456789"}, vies)
+	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "GR123456789", IncludeVIES: true}, vies)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -219,6 +219,27 @@ func TestValidateVAT_Greece_GR_UsesELForVIES(t *testing.T) {
 	}
 	if vies.lastCC != "EL" {
 		t.Errorf("VIES was called with country code %q, want EL (GR maps to EL for VIES)", vies.lastCC)
+	}
+}
+
+func TestValidateVAT_EUMember_SkipVIES(t *testing.T) {
+	vies := &mockVIESChecker{
+		result: &VIESResult{Valid: true, CompanyName: "SHOULD NOT BE CALLED"},
+	}
+
+	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "DE123456789", IncludeVIES: false}, vies)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !resp.FormatValid {
+		t.Error("FormatValid should be true")
+	}
+	if resp.VIESRegistered != nil {
+		t.Error("VIESRegistered should be nil when VIES is not requested")
+	}
+	if vies.called {
+		t.Error("VIES should not be called when IncludeVIES is false")
 	}
 }
 

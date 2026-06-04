@@ -37,7 +37,8 @@ make docker-down
 
 ```bash
 curl http://localhost:8080/healthz
-curl http://localhost:8080/v1/vat-numbers/ESA1234567J:validate
+curl http://localhost:8080/v1/vat/ES00000000T
+curl http://localhost:8080/v1/vies/DE123456789
 ```
 
 ## Architecture
@@ -86,18 +87,43 @@ This project follows [Semantic Versioning](https://semver.org/). See `VERSION` f
 
 ## API Specification
 
-### Validate a VAT Number
+### Validate VAT Number (Format Only)
 
 ```
-GET /v1/vat-numbers/{vat-number}:validate
+GET /v1/vat/{vat-number}
 ```
+
+No VIES lookup. Fast (~1ms). Returns format validation and country classification.
 
 #### Response (200 OK)
 
 ```json
 {
   "data": {
-    "vat_number": "ESA1234567J",
+    "vat_number": "ES00000000T",
+    "country_code": "ES",
+    "country_classification": "EU_MEMBER",
+    "format_valid": true,
+    "vies_registered": null
+  },
+  "meta": { "validated_at": "2025-01-01T12:00:00Z" }
+}
+```
+
+### Verify VAT Number (Format + VIES)
+
+```
+GET /v1/vies/{vat-number}
+```
+
+Includes VIES lookup for EU members (~1-2s). Returns company name and address when registered.
+
+#### Response (200 OK)
+
+```json
+{
+  "data": {
+    "vat_number": "ES00000000T",
     "country_code": "ES",
     "country_classification": "EU_MEMBER",
     "format_valid": true,
@@ -105,9 +131,7 @@ GET /v1/vat-numbers/{vat-number}:validate
     "vies_company_name": "COMPANY SL",
     "vies_address": "CALLE MAYOR 1, MADRID"
   },
-  "meta": {
-    "validated_at": "2025-01-01T12:00:00Z"
-  }
+  "meta": { "validated_at": "2025-01-01T12:00:00Z" }
 }
 ```
 

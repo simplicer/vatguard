@@ -114,22 +114,31 @@ A VAT number input is parsed as:
 
 ### Endpoint
 
+Two endpoints, one for format validation only and one for format + VIES:
+
 ```
-GET /v1/vat-numbers/{vat-number}:validate
+GET /v1/vat/{number}   — Format validation only (fast, no external calls)
+GET /v1/vies/{number}  — Format validation + VIES verification (EU only)
 ```
 
 ### Path Parameter
 
-- `{vat-number}`: URL-encoded VAT number including country prefix.
+- `{number}`: VAT number including country prefix (e.g., `ES00000000T`, `DE123456789`).
 
-### Response Codes
+### `/v1/vat/{number}` Behavior
 
-| Code | Condition                                    |
-|------|----------------------------------------------|
-| 200  | Validation completed (format may be invalid) |
-| 400  | Malformed request (missing VAT number)       |
-| 422  | Unparseable VAT number or sanctioned country  |
-| 503  | VIES service unavailable                      |
+1. Parse VAT number.
+2. Classify country.
+3. Validate format.
+4. Return result (no VIES call).
+
+### `/v1/vies/{number}` Behavior
+
+1. Parse VAT number.
+2. Classify country.
+3. Validate format.
+4. If EU member with valid format → query VIES.
+5. Return combined result.
 
 ### Content-Type
 

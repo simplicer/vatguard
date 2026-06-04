@@ -40,8 +40,17 @@ func NewHTTPHandler(vies application.VIESChecker, log *slog.Logger) *HTTPHandler
 	}
 }
 
-// HandleValidate handles GET /v1/vat-numbers/{vat-number}:validate
-func (h *HTTPHandler) HandleValidate(w http.ResponseWriter, r *http.Request) {
+// HandleVAT handles GET /v1/vat/{number} — format validation only.
+func (h *HTTPHandler) HandleVAT(w http.ResponseWriter, r *http.Request) {
+	h.handleValidation(w, r, false)
+}
+
+// HandleVIES handles GET /v1/vies/{number} — format validation + VIES lookup.
+func (h *HTTPHandler) HandleVIES(w http.ResponseWriter, r *http.Request) {
+	h.handleValidation(w, r, true)
+}
+
+func (h *HTTPHandler) handleValidation(w http.ResponseWriter, r *http.Request, includeVIES bool) {
 	if r.Method != http.MethodGet {
 		writeProblemJSON(w, ProblemJSON{
 			Type:     "https://vat-validator.dev/errors/method-not-allowed",
@@ -53,9 +62,8 @@ func (h *HTTPHandler) HandleValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract VAT number from path: /v1/vat-numbers/{vat-number}:validate
-	vatNumber := extractVATNumber(r.URL.Path)
-	if vatNumber == "" {
+	number := extractPathNumber(r.URL.Path)
+	if number == "" {
 		writeProblemJSON(w, ProblemJSON{
 			Type:     "https://vat-validator.dev/errors/missing-vat-number",
 			Title:    "Missing VAT number",
@@ -67,19 +75,21 @@ func (h *HTTPHandler) HandleValidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.log.Info("validating VAT number",
-		slog.String("vat_number", vatNumber),
-		slog.String("method", r.Method),
+		slog.String("number", number),
+		slog.Bool("include_vies", includeVIES),
 		slog.String("path", r.URL.Path),
 	)
 
 	resp, vErr := application.ValidateVAT(
-		application.ValidateVATRequest{VATNumber: vatNumber},
+		application.ValidateVATRequest{
+			VATNumber:   number,
+			IncludeVIES: includeVIES,
+		},
 		h.vies,
 	)
 
 	if vErr != nil {
 		if resp == nil {
-			// Hard error — no partial result
 			writeProblemJSON(w, ProblemJSON{
 				Type:     vErr.Type,
 				Title:    vErr.Title,
@@ -90,9 +100,8 @@ func (h *HTTPHandler) HandleValidate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Soft error — VIES unavailable, return partial result with 503
 		h.log.Warn("VIES lookup failed, returning partial result",
-			slog.String("vat_number", vatNumber),
+			slog.String("number", number),
 			slog.String("error", vErr.Title),
 		)
 		writeJSON(w, vErr.Status, ValidationResponse{
@@ -117,24 +126,24 @@ func (h *HTTPHandler) HandleHealthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func extractVATNumber(path string) string {
-	// Expected: /v1/vat-numbers/{vat-number}:validate
-	const prefix = "/v1/vat-numbers/"
-	if !strings.HasPrefix(path, prefix) {
-		return ""
+// extractPathNumber extracts the VAT number from paths like /v1/vat/ES12345678Z
+// or /v1/vies/ES12345678Z.
+func extractPathNumber(path string) string {
+	// Try /v1/vat/ prefix
+	for _, prefix := range []string{"/v1/vat/", "/v1/vies/"} {
+		if strings.HasPrefix(path, prefix) {
+			number := strings.TrimPrefix(path, prefix)
+			// Remove trailing slashes or :validate suffix
+			if idx := strings.Index(number, ":"); idx >= 0 {
+				number = number[:idx]
+			}
+			number = strings.TrimSuffix(number, "/")
+			if number != "" {
+				return number
+			}
+		}
 	}
-
-	rest := strings.TrimPrefix(path, prefix)
-
-	// Remove :validate suffix
-	if idx := strings.Index(rest, ":"); idx >= 0 {
-		rest = rest[:idx]
-	}
-
-	if rest == "" {
-		return ""
-	}
-	return rest
+	return ""
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

@@ -12,10 +12,10 @@ func NewRouter(vies application.VIESChecker, log *slog.Logger) http.Handler {
 	handler := NewHTTPHandler(vies, log)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/vat-numbers/{vatNumber}", handler.HandleValidate)
+	mux.HandleFunc("GET /v1/vat/{number}", handler.HandleVAT)
+	mux.HandleFunc("GET /v1/vies/{number}", handler.HandleVIES)
 	mux.HandleFunc("GET /healthz", handler.HandleHealthz)
 
-	// Wrap with logging middleware
 	return loggingMiddleware(mux, log)
 }
 

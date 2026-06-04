@@ -20,7 +20,8 @@ type VIESChecker interface {
 
 // ValidateVATRequest is the input for the validate VAT use case.
 type ValidateVATRequest struct {
-	VATNumber string
+	VATNumber   string
+	IncludeVIES bool
 }
 
 // ValidateVATResponse is the output of the validate VAT use case.
@@ -80,13 +81,12 @@ func ValidateVAT(req ValidateVATRequest, vies VIESChecker) (*ValidateVATResponse
 		ValidatedAt:           time.Now().UTC().Format(time.RFC3339),
 	}
 
-	// VIES lookup only for EU members with valid format
-	if classification == domain.EUMember && formatValid {
+	// VIES lookup only when explicitly requested, for EU members with valid format
+	if req.IncludeVIES && classification == domain.EUMember && formatValid {
 		viesCode := domain.GetVIESCountryCode(parsed.CountryCode)
 		if viesCode != "" {
 			result, err := vies.Check(viesCode, parsed.NationalNumber)
 			if err != nil {
-				// VIES unavailable — return what we have with null VIES fields
 				return resp, &ValidationError{
 					Type:   "https://vat-validator.dev/errors/vies-unavailable",
 					Title:  "VIES service unavailable",

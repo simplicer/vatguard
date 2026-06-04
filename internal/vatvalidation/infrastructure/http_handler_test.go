@@ -3,16 +3,16 @@ package infrastructure
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/application"
 )
 
-func TestHandleValidate_Success_EU(t *testing.T) {
+func TestHandleVAT_Success_EU(t *testing.T) {
 	vies := &stubVIES{
 		result: &application.VIESResult{
 			Valid:       true,
@@ -20,12 +20,12 @@ func TestHandleValidate_Success_EU(t *testing.T) {
 			Address:     "ADDR",
 		},
 	}
-	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/vat-numbers/ESA12345674:validate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/vat/ES00000000T", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleValidate(w, req)
+	handler.HandleVAT(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -39,16 +39,52 @@ func TestHandleValidate_Success_EU(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
+
+	// VIES should NOT be called for /vat endpoint
+	data := resp.Data.(map[string]interface{})
+	if data["vies_registered"] != nil {
+		t.Error("VIESRegistered should be nil on /vat endpoint")
+	}
 }
 
-func TestHandleValidate_SanctionedCountry(t *testing.T) {
-	vies := &stubVIES{}
-	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+func TestHandleVIES_Success_EU(t *testing.T) {
+	vies := &stubVIES{
+		result: &application.VIESResult{
+			Valid:       true,
+			CompanyName: "TEST SL",
+			Address:     "ADDR",
+		},
+	}
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/vat-numbers/RU1234567890:validate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/vies/ES00000000T", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleValidate(w, req)
+	handler.HandleVIES(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var resp ValidationResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+
+	data := resp.Data.(map[string]interface{})
+	if data["vies_registered"] == nil {
+		t.Error("VIESRegistered should NOT be nil on /vies endpoint")
+	}
+}
+
+func TestHandleVAT_SanctionedCountry(t *testing.T) {
+	vies := &stubVIES{}
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/vat/RU1234567890", nil)
+	w := httptest.NewRecorder()
+
+	handler.HandleVAT(w, req)
 
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusUnprocessableEntity)
@@ -67,42 +103,42 @@ func TestHandleValidate_SanctionedCountry(t *testing.T) {
 	}
 }
 
-func TestHandleValidate_Unparseable(t *testing.T) {
+func TestHandleVAT_Unparseable(t *testing.T) {
 	vies := &stubVIES{}
-	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/vat-numbers/1:validate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/vat/12", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleValidate(w, req)
+	handler.HandleVAT(w, req)
 
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusUnprocessableEntity)
 	}
 }
 
-func TestHandleValidate_VIESUnavailable(t *testing.T) {
+func TestHandleVIES_Unavailable(t *testing.T) {
 	vies := &stubVIES{err: errors.New("unavailable")}
-	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/vat-numbers/DE123456789:validate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/vies/DE123456789", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleValidate(w, req)
+	handler.HandleVIES(w, req)
 
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusServiceUnavailable)
 	}
 }
 
-func TestHandleValidate_NonEU(t *testing.T) {
+func TestHandleVAT_NonEU(t *testing.T) {
 	vies := &stubVIES{}
-	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/vat-numbers/GB123456789:validate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/vat/GB123456789", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleValidate(w, req)
+	handler.HandleVAT(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -111,7 +147,7 @@ func TestHandleValidate_NonEU(t *testing.T) {
 
 func TestHandleHealthz(t *testing.T) {
 	vies := &stubVIES{}
-	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	handler := NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
@@ -131,29 +167,31 @@ func TestHandleHealthz(t *testing.T) {
 	}
 }
 
-func TestExtractVATNumber(t *testing.T) {
+func TestExtractPathNumber(t *testing.T) {
 	tests := []struct {
 		path string
 		want string
 	}{
-		{"/v1/vat-numbers/ESA12345674:validate", "ESA12345674"},
-		{"/v1/vat-numbers/DE123456789:validate", "DE123456789"},
-		{"/v1/vat-numbers/GB123456789", "GB123456789"},
-		{"/v1/vat-numbers/:validate", ""},
-		{"/v1/vat-numbers/", ""},
+		{"/v1/vat/ES00000000T", "ES00000000T"},
+		{"/v1/vat/DE123456789", "DE123456789"},
+		{"/v1/vies/ES00000000T", "ES00000000T"},
+		{"/v1/vies/DE123456789", "DE123456789"},
+		{"/v1/vat/GB123456789", "GB123456789"},
+		{"/v1/vat/", ""},
+		{"/v1/vies/", ""},
 		{"/other/path", ""},
 	}
 
 	for _, tt := range tests {
-		got := extractVATNumber(tt.path)
+		got := extractPathNumber(tt.path)
 		if got != tt.want {
-			t.Errorf("extractVATNumber(%q) = %q, want %q", tt.path, got, tt.want)
+			t.Errorf("extractPathNumber(%q) = %q, want %q", tt.path, got, tt.want)
 		}
 	}
 }
 
 func TestNewRouter_Routes(t *testing.T) {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	vies := &stubVIES{
 		result: &application.VIESResult{Valid: true},
 	}
@@ -169,6 +207,26 @@ func TestNewRouter_Routes(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("healthz status = %d, want 200", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Test /v1/vat/ (format only)
+	resp, err = http.Get(server.URL + "/v1/vat/GB123456789")
+	if err != nil {
+		t.Fatalf("vat request: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("vat status = %d, want 200", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Test /v1/vies/ (with VIES)
+	resp, err = http.Get(server.URL + "/v1/vies/DE123456789")
+	if err != nil {
+		t.Fatalf("vies request: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("vies status = %d, want 200", resp.StatusCode)
 	}
 	resp.Body.Close()
 }

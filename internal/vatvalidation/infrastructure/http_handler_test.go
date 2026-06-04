@@ -13,7 +13,7 @@ import (
 )
 
 func newTestHandler(vies application.VIESChecker) *HTTPHandler {
-	return NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)), "0.8.0")
+	return NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)), "1.0.0")
 }
 
 func TestHandleVAT_Success_EU(t *testing.T) {
@@ -194,8 +194,8 @@ func TestHandleVersion(t *testing.T) {
 	if !ok {
 		t.Fatal("response should have data object")
 	}
-	if data["version"] != "0.8.0" {
-		t.Errorf("version = %v, want 0.8.0", data["version"])
+	if data["version"] != "1.0.0" {
+		t.Errorf("version = %v, want 1.0.0", data["version"])
 	}
 }
 
@@ -228,7 +228,7 @@ func TestNewRouter_Routes(t *testing.T) {
 		result: &application.VIESResult{Valid: true},
 	}
 
-	router := NewRouter(vies, log, "0.8.0")
+	router := NewRouter(vies, log, "1.0.0")
 	server := httptest.NewServer(router)
 	defer server.Close()
 

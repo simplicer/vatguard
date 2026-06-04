@@ -10,7 +10,7 @@ info:
 
     Supports all 27 EU member states, non-EU countries (GB, NO, CH, etc.),
     and full Spanish NIF/NIE check-digit validation per Ministerio del Interior.
-  version: 0.8.0
+  version: 1.0.0
   contact:
     name: Simplicer
     url: https://codeberg.org/simplicer
@@ -173,10 +173,10 @@ paths:
                     properties:
                       version:
                         type: string
-                        example: "0.8.0"
+                        example: "1.0.0"
               example:
                 data:
-                  version: "0.8.0"
+                  version: "1.0.0"
 
 components:
   schemas:

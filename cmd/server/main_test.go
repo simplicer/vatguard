@@ -56,8 +56,8 @@ func TestE2E_Version(t *testing.T) {
 	}
 
 	data := result["data"].(map[string]interface{})
-	if data["version"] != "0.8.0" {
-		t.Errorf("version = %v, want 0.8.0", data["version"])
+	if data["version"] != "1.0.0" {
+		t.Errorf("version = %v, want 1.0.0", data["version"])
 	}
 }
 
@@ -201,7 +201,7 @@ func createTestServer() *httptest.Server {
 			Address:     "TEST ADDRESS",
 		},
 	}
-	handler := infrastructure.NewHTTPHandler(vies, logger, "0.8.0")
+	handler := infrastructure.NewHTTPHandler(vies, logger, "1.0.0")
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/vat/{number}", handler.HandleVAT)
 	mux.HandleFunc("GET /v1/vies/{number}", handler.HandleVIES)

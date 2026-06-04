@@ -14,7 +14,7 @@ A lightweight, secure API in Go that validates VAT (Value Added Tax) identificat
 
 ### Prerequisites
 
-- Go 1.23+
+- Go 1.24+
 
 ### Build & Run
 
@@ -83,8 +83,8 @@ Tests are colocated with source files (Go convention): `*_test.go` alongside `*.
 
 This project follows [Semantic Versioning](https://semver.org/). See `VERSION` file.
 
-- Pre-release: `0.Y.Z`
 - Conventional Commits are used for all changes
+- License: GNU AGPL v3
 
 ## API Specification
 

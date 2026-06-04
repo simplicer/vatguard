@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-06-04
+
+### Changed
+- License changed from MIT to GNU AGPL v3 (strong copyleft, network use covered)
+- Version bumped to 1.0.0 — first stable release
+- Go version updated from 1.23 to 1.24
+- Docker image updated to golang:1.24-alpine
+
 ## [0.8.0] - 2025-06-04
 
 ### Changed
@@ -80,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GR→EL VIES country code mapping
 - 9 country classification tests
 
+[1.0.0]: https://codeberg.org/simplicer/vatguard/releases/tag/v1.0.0
 [0.8.0]: https://codeberg.org/simplicer/vatguard/releases/tag/v0.8.0
 [0.7.0]: https://codeberg.org/simplicer/vatguard/releases/tag/v0.7.0
 [0.6.0]: https://codeberg.org/simplicer/vatguard/releases/tag/v0.6.0

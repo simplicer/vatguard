@@ -30,7 +30,7 @@ func TestValidateVAT_ValidEUMember_VIESRegistered(t *testing.T) {
 		},
 	}
 
-	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "ESA1234567J"}, vies)
+	resp, err := ValidateVAT(ValidateVATRequest{VATNumber: "ESA12345674"}, vies)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

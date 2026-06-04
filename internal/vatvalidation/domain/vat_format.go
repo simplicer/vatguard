@@ -252,19 +252,150 @@ func validateSlovenia(s string) bool {
 }
 
 func validateSpain(s string) bool {
-	// Letter + 7 alphanumeric chars + letter/digit = 9 chars total
+	// 9 chars total. Three possible types:
+	// 1. NIF (DNI): 8 digits + control letter
+	// 2. NIE: X/Y/Z + 7 digits + control letter
+	// 3. NIF jurídica: type letter + 7 digits + control (digit or letter)
 	if len(s) != 9 {
 		return false
 	}
-	if !isLetter(s[0]) {
-		return false
-	}
-	for i := 1; i <= 7; i++ {
+
+	// All chars must be alphanumeric
+	for i := 0; i < 9; i++ {
 		if !isAlphanumericByte(s[i]) {
 			return false
 		}
 	}
-	return isLetter(s[8]) || isDigit(s[8])
+
+	// Dispatch based on first character
+	switch {
+	case isDigit(s[0]):
+		// NIF (DNI): 8 digits + control letter
+		if !isDigits(s[:8]) {
+			return false
+		}
+		if !isLetter(s[8]) {
+			return false
+		}
+		return s[8] == nifControlLetter(s[:8])
+
+	case s[0] == 'X' || s[0] == 'Y' || s[0] == 'Z' ||
+		s[0] == 'x' || s[0] == 'y' || s[0] == 'z':
+		// NIE: X/Y/Z + 7 digits + control letter
+		if !isDigits(s[1:8]) {
+			return false
+		}
+		if !isLetter(s[8]) {
+			return false
+		}
+		// Replace prefix: X→0, Y→1, Z→2
+		prefix := byte('0')
+		upper := s[0]
+		if upper >= 'a' {
+			upper -= 32
+		}
+		switch upper {
+		case 'X':
+			prefix = '0'
+		case 'Y':
+			prefix = '1'
+		case 'Z':
+			prefix = '2'
+		}
+		numStr := string(prefix) + s[1:8]
+		return s[8] == nifControlLetter(numStr)
+
+	case isLetter(s[0]):
+		// NIF jurídica: type letter + 7 digits + control (digit or letter)
+		if !isValidSpainEntityTypeLetter(s[0]) {
+			return false
+		}
+		if !isDigits(s[1:8]) {
+			return false
+		}
+		control := s[8]
+		expected := spainJuridicaControl(s[1:8])
+
+		upperFirst := s[0]
+		if upperFirst >= 'a' {
+			upperFirst -= 32
+		}
+
+		// Entity types with digit-only control: A, B, C, D, E, F, G, H, J, U, V
+		switch upperFirst {
+		case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'U', 'V':
+			return isDigit(control) && control == expected
+		case 'N', 'P', 'Q', 'R', 'S', 'W':
+			// Letter-only control: map digit 0-9 to J,A,B,C,D,E,F,G,H,I
+			expectedLetter := spainJuridicaControlLetter(expected)
+			return isLetter(control) && (control == expectedLetter || control == expectedLetter+32)
+		}
+		return false
+	}
+
+	return false
+}
+
+// nifControlLetter returns the expected control letter for a NIF/DNI number.
+func nifControlLetter(numStr string) byte {
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return 0
+	}
+	const letters = "TRWAGMYFPDXBNJZSQVHLCKE"
+	idx := num % 23
+	return letters[idx]
+}
+
+// spainJuridicaControl calculates the control character for NIF jurídica.
+// Returns the expected digit byte ('0'-'9') or letter byte ('A'-'J').
+func spainJuridicaControl(digits string) byte {
+	// Sum even-position digits (indices 1, 3, 5)
+	sumEven := 0
+	for _, i := range []int{1, 3, 5} {
+		sumEven += int(digits[i] - '0')
+	}
+
+	// Sum odd-position digits (indices 0, 2, 4, 6), each doubled then digit-summed
+	sumOdd := 0
+	for _, i := range []int{0, 2, 4, 6} {
+		d := int(digits[i] - '0')
+		doubled := d * 2
+		sumOdd += (doubled / 10) + (doubled % 10)
+	}
+
+	total := sumEven + sumOdd
+	controlDigit := 10 - (total % 10)
+	if controlDigit == 10 {
+		controlDigit = 0
+	}
+
+	// Return as digit character
+	return byte('0' + controlDigit)
+}
+
+// isValidSpainEntityTypeLetter checks if the first character is a valid
+// entity type letter for Spanish NIF jurídico.
+func isValidSpainEntityTypeLetter(c byte) bool {
+	upper := c
+	if upper >= 'a' {
+		upper -= 32
+	}
+	switch upper {
+	case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J',
+		'N', 'P', 'Q', 'R', 'S', 'U', 'V', 'W':
+		return true
+	}
+	return false
+}
+
+// spainJuridicaControlLetter maps a control digit byte to the corresponding
+// control letter for entity types that use letter-based control.
+// Mapping: 1→A, 2→B, 3→C, 4→D, 5→E, 6→F, 7→G, 8→H, 9→I, 0→J
+func spainJuridicaControlLetter(digitByte byte) byte {
+	d := digitByte - '0'
+	const mapping = "JABCDEFGHI"
+	return mapping[d]
 }
 
 func validateSweden(s string) bool {

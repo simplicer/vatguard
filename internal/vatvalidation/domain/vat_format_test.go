@@ -8,7 +8,7 @@ func TestParseVATNumber_Valid(t *testing.T) {
 		wantCountry  string
 		wantNational string
 	}{
-		{"ESA1234567J", "ES", "A1234567J"},
+		{"ESA12345674", "ES", "A12345674"},
 		{"DE123456789", "DE", "123456789"},
 		{"FRAB123456789", "FR", "AB123456789"},
 		{"NL123456789B12", "NL", "123456789B12"},
@@ -53,22 +53,48 @@ func TestParseVATNumber_CountryCodeNotAlpha(t *testing.T) {
 
 func TestValidateFormat_Spain(t *testing.T) {
 	tests := []struct {
+		name  string
 		input string
 		valid bool
 	}{
-		{"A1234567J", true},
-		{"B12345678", true},
-		{"A0000000A", true},
-		{"123456789", false},   // no leading letter
-		{"A123456", false},     // too short
-		{"A1234567890", false}, // too long
+		// NIF (DNI): 8 digits + control letter (mod 23)
+		{"valid DNI all zeros", "00000000T", true},       // 0 % 23 = 0 → T
+		{"valid DNI 12345678", "12345678Z", true},        // 12345678 % 23 = 14 → Z
+		{"invalid DNI wrong letter", "12345678A", false}, // should be Z, not A
+		{"invalid DNI digit at end", "000000009", false}, // must end with letter
+
+		// NIE: X/Y/Z + 7 digits + control letter
+		{"valid NIE X", "X0000000T", true},               // X→0, 00000000 % 23 = 0 → T
+		{"valid NIE Y", "Y0000000Z", true},               // Y→1, 10000000 % 23 = 14 → Z
+		{"valid NIE Z", "Z0000000M", true},               // Z→2, 20000000 % 23 = 5 → M
+		{"valid NIE X2345678", "X2345678T", true},        // X→0, 02345678 % 23 = 0 → T
+		{"invalid NIE wrong letter", "X0000000A", false}, // should be T, not A
+		{"invalid NIE prefix W", "W0000000T", false},     // W is not a valid NIE prefix
+
+		// NIF jurídica: type letter + 7 digits + control
+		{"valid B (SL)", "B12345674", true},             // B=digit control, 1234567 → 4
+		{"valid A (SA)", "A12345674", true},             // A=digit control, 1234567 → 4
+		{"valid G (Asoc)", "G00000000", true},           // G=digit control, 0000000 → 0
+		{"valid S (Admin)", "S0000000J", true},          // S=letter control, 0000000→0→J
+		{"valid P (Local)", "P0000000J", true},          // P=letter control, 0000000→0→J
+		{"valid N (extranjera)", "N0000000J", true},     // N=letter control, 0000000→0→J
+		{"invalid B wrong digit", "B12345675", false},   // should be 4, not 5
+		{"invalid S wrong letter", "S0000000A", false},  // should be J, not A
+		{"invalid entity letter I", "I12345678", false}, // I is not a valid entity type
+		{"invalid entity letter T", "T12345678", false}, // T is not a valid entity type
+
+		// Length/format checks
+		{"too short", "1234567", false},   // only 7 chars
+		{"too long", "1234567890", false}, // 10 chars
 	}
 
 	for _, tt := range tests {
-		result := ValidateFormat("ES", tt.input)
-		if result != tt.valid {
-			t.Errorf("ValidateFormat(\"ES\", %q) = %v, want %v", tt.input, result, tt.valid)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			result := ValidateFormat("ES", tt.input)
+			if result != tt.valid {
+				t.Errorf("ValidateFormat(\"ES\", %q) = %v, want %v", tt.input, result, tt.valid)
+			}
+		})
 	}
 }
 

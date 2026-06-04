@@ -8,17 +8,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/application"
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/infrastructure"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/application"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/infrastructure"
 )
 
-func TestE2E_Healthz(t *testing.T) {
+func TestE2E_Health(t *testing.T) {
 	server := createTestServer()
 	defer server.Close()
 
-	resp, err := http.Get(server.URL + "/healthz")
+	resp, err := http.Get(server.URL + "/health")
 	if err != nil {
-		t.Fatalf("healthz request: %v", err)
+		t.Fatalf("health request: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -32,6 +32,31 @@ func TestE2E_Healthz(t *testing.T) {
 	}
 	if body["status"] != "ok" {
 		t.Errorf("status = %q, want ok", body["status"])
+	}
+}
+
+func TestE2E_Version(t *testing.T) {
+	server := createTestServer()
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/version")
+	if err != nil {
+		t.Fatalf("version request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	data := result["data"].(map[string]interface{})
+	if data["version"] != "0.7.0" {
+		t.Errorf("version = %v, want 0.7.0", data["version"])
 	}
 }
 
@@ -175,11 +200,12 @@ func createTestServer() *httptest.Server {
 			Address:     "TEST ADDRESS",
 		},
 	}
-	handler := infrastructure.NewHTTPHandler(vies, logger)
+	handler := infrastructure.NewHTTPHandler(vies, logger, "0.7.0")
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/vat/{number}", handler.HandleVAT)
 	mux.HandleFunc("GET /v1/vies/{number}", handler.HandleVIES)
-	mux.HandleFunc("GET /healthz", handler.HandleHealthz)
+	mux.HandleFunc("GET /health", handler.HandleHealth)
+	mux.HandleFunc("GET /version", handler.HandleVersion)
 	return httptest.NewServer(mux)
 }
 

@@ -1,8 +1,8 @@
 .PHONY: build run test clean lint fmt help docker-build docker-up docker-down
 
 # Project
-MODULE     := github.com/antonio-villamarin/vat-validator
-BINARY     := bin/vat-validator
+MODULE     := codeberg.org/simplicer/vatguard
+BINARY     := bin/vatguard
 VERSION    := $(shell cat VERSION)
 BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 COMMIT     := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")

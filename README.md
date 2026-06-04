@@ -36,7 +36,8 @@ make docker-down
 ### Quick Test
 
 ```bash
-curl http://localhost:8080/healthz
+curl http://localhost:8080/health
+curl http://localhost:8080/version
 curl http://localhost:8080/v1/vat/ES00000000T
 curl http://localhost:8080/v1/vies/DE123456789
 ```

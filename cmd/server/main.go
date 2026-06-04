@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/infrastructure"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/infrastructure"
 )
 
 var (
@@ -24,7 +24,7 @@ func main() {
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
 	logger := slog.New(handler)
 
-	logger.Info("starting VAT Validator API",
+	logger.Info("starting vatguard",
 		slog.String("version", Version),
 		slog.String("commit", Commit),
 		slog.String("build_time", BuildTime),
@@ -32,7 +32,7 @@ func main() {
 	)
 
 	viesClient := infrastructure.NewVIESClient()
-	router := infrastructure.NewRouter(viesClient, logger)
+	router := infrastructure.NewRouter(viesClient, logger, Version)
 
 	server := &http.Server{
 		Addr:    ":" + port,

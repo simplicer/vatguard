@@ -4,17 +4,18 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/application"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/application"
 )
 
 // NewRouter creates the HTTP router with all routes configured.
-func NewRouter(vies application.VIESChecker, log *slog.Logger) http.Handler {
-	handler := NewHTTPHandler(vies, log)
+func NewRouter(vies application.VIESChecker, log *slog.Logger, version string) http.Handler {
+	handler := NewHTTPHandler(vies, log, version)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/vat/{number}", handler.HandleVAT)
 	mux.HandleFunc("GET /v1/vies/{number}", handler.HandleVIES)
-	mux.HandleFunc("GET /healthz", handler.HandleHealthz)
+	mux.HandleFunc("GET /health", handler.HandleHealth)
+	mux.HandleFunc("GET /version", handler.HandleVersion)
 
 	return loggingMiddleware(mux, log)
 }

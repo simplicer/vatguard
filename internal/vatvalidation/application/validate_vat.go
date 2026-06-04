@@ -3,7 +3,7 @@ package application
 import (
 	"time"
 
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/domain"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/domain"
 )
 
 // VIESResult contains the result of a VIES lookup.

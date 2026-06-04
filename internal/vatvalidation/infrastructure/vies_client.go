@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/application"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/application"
 )
 
 const (

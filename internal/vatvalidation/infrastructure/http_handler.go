@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/antonio-villamarin/vat-validator/internal/vatvalidation/application"
+	"codeberg.org/simplicer/vatguard/internal/vatvalidation/application"
 )
 
 // ProblemJSON is a RFC 7807 Problem Details response.
@@ -28,15 +28,17 @@ type ValidationResponse struct {
 
 // HTTPHandler handles VAT validation HTTP requests.
 type HTTPHandler struct {
-	vies application.VIESChecker
-	log  *slog.Logger
+	vies    application.VIESChecker
+	log     *slog.Logger
+	version string
 }
 
 // NewHTTPHandler creates a new HTTP handler for VAT validation.
-func NewHTTPHandler(vies application.VIESChecker, log *slog.Logger) *HTTPHandler {
+func NewHTTPHandler(vies application.VIESChecker, log *slog.Logger, version string) *HTTPHandler {
 	return &HTTPHandler{
-		vies: vies,
-		log:  log,
+		vies:    vies,
+		log:     log,
+		version: version,
 	}
 }
 
@@ -121,9 +123,24 @@ func (h *HTTPHandler) handleValidation(w http.ResponseWriter, r *http.Request, i
 	})
 }
 
-// HandleHealthz handles GET /healthz
-func (h *HTTPHandler) HandleHealthz(w http.ResponseWriter, r *http.Request) {
+// HandleHealth handles GET /health
+func (h *HTTPHandler) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// HandleVersion handles GET /version
+func (h *HTTPHandler) HandleVersion(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}{
+		Data: struct {
+			Version string `json:"version"`
+		}{
+			Version: h.version,
+		},
+	})
 }
 
 // extractPathNumber extracts the VAT number from paths like /v1/vat/ES12345678Z

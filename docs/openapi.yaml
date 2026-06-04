@@ -1,0 +1,278 @@
+openapi: 3.1.0
+
+info:
+  title: Vatify — VAT/NIF Validation API
+  description: |
+    Lightweight API for VAT number format validation and VIES verification.
+
+    - **`/v1/vat/{number}`** — Format validation only (fast, no external calls)
+    - **`/v1/vies/{number}`** — Format validation + VIES lookup for EU members
+
+    Supports all 27 EU member states, non-EU countries (GB, NO, CH, etc.),
+    and full Spanish NIF/NIE check-digit validation per Ministerio del Interior.
+  version: 0.7.0
+  contact:
+    name: Simplicer
+    url: https://codeberg.org/simplicer
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: vat
+    description: Format validation (no external calls)
+  - name: vies
+    description: Format validation + VIES verification
+
+paths:
+  /v1/vat/{number}:
+    get:
+      tags: [vat]
+      summary: Validate VAT number format
+      description: |
+        Parses and validates the format of a VAT number.
+        Returns country classification and format validity.
+        Does **not** call VIES.
+      operationId: validateVat
+      parameters:
+        - name: number
+          in: path
+          required: true
+          description: Full VAT number with country prefix (e.g. `ES00000000T`, `DE123456789`)
+          schema:
+            type: string
+            minLength: 3
+            example: ES00000000T
+      responses:
+        "200":
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResponse"
+              example:
+                data:
+                  vat_number: "ES00000000T"
+                  country_code: "ES"
+                  country_classification: "EU_MEMBER"
+                  format_valid: true
+                  vies_registered: null
+                meta:
+                  validated_at: "2025-01-01T12:00:00Z"
+        "400":
+          description: Missing VAT number
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemJSON"
+        "422":
+          description: Unparseable VAT number or sanctioned country
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemJSON"
+
+  /v1/vies/{number}:
+    get:
+      tags: [vies]
+      summary: Validate format and verify via VIES
+      description: |
+        Parses, validates format, and for EU members with valid format,
+        queries the VIES SOAP service to check registration.
+        Returns company name and address when the number is registered.
+      operationId: verifyVies
+      parameters:
+        - name: number
+          in: path
+          required: true
+          description: Full VAT number with country prefix (e.g. `DE123456789`)
+          schema:
+            type: string
+            minLength: 3
+            example: DE123456789
+      responses:
+        "200":
+          description: Validation and VIES verification completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResponse"
+              example:
+                data:
+                  vat_number: "DE123456789"
+                  country_code: "DE"
+                  country_classification: "EU_MEMBER"
+                  format_valid: true
+                  vies_registered: true
+                  vies_company_name: "COMPANY GMBH"
+                  vies_address: "BERLINER STR 1, 10115 BERLIN"
+                meta:
+                  validated_at: "2025-01-01T12:00:00Z"
+        "400":
+          description: Missing VAT number
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemJSON"
+        "422":
+          description: Unparseable VAT number or sanctioned country
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemJSON"
+        "503":
+          description: VIES service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResponse"
+
+  /healthz:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns service health status.
+      operationId: healthz
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  schemas:
+    ValidationResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/VATValidationData"
+        meta:
+          type: object
+          required: [validated_at]
+          properties:
+            validated_at:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp of when the validation was performed
+
+    VATValidationData:
+      type: object
+      required: [vat_number, country_code, country_classification, format_valid]
+      properties:
+        vat_number:
+          type: string
+          description: The full VAT number as provided
+          example: "ES00000000T"
+        country_code:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          example: "ES"
+          enum:
+            - AT
+            - BE
+            - BG
+            - HR
+            - CY
+            - CZ
+            - DK
+            - EE
+            - FI
+            - FR
+            - DE
+            - EL
+            - GR
+            - HU
+            - IE
+            - IT
+            - LV
+            - LT
+            - LU
+            - MT
+            - NL
+            - PL
+            - PT
+            - RO
+            - SK
+            - SI
+            - ES
+            - SE
+            - GB
+            - NO
+            - CH
+            - AU
+            - JP
+            - TR
+            - CA
+            - CN
+            - IN
+            - KR
+            - MX
+            - ZA
+            - BR
+            - AR
+            - RU
+            - BY
+        country_classification:
+          type: string
+          description: Country classification based on EU membership and sanctions
+          enum:
+            - EU_MEMBER
+            - NON_EU_RECOGNIZED
+            - NON_EU_UNKNOWN
+            - SANCTIONED
+          example: "EU_MEMBER"
+        format_valid:
+          type: boolean
+          description: Whether the VAT number format is valid for the given country
+          example: true
+        vies_registered:
+          type: boolean
+          nullable: true
+          description: |
+            Whether the VAT number is registered in VIES.
+            `null` when VIES was not queried (/vat endpoint) or country is non-EU.
+          example: true
+        vies_company_name:
+          type: string
+          description: Company name from VIES (only when registered)
+          example: "COMPANY SL"
+        vies_address:
+          type: string
+          description: Company address from VIES (only when registered)
+          example: "CALLE MAYOR 1, MADRID"
+
+    ProblemJSON:
+      type: object
+      description: RFC 7807 Problem Details
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: Error type URI
+          example: "https://vat-validator.dev/errors/sanctioned-country"
+        title:
+          type: string
+          description: Human-readable error title
+          example: "Sanctioned country"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 422
+        detail:
+          type: string
+          description: Detailed error message
+          example: "VAT validation is not available for countries under EU sanctions: RU"
+        instance:
+          type: string
+          description: Request path that caused the error
+          example: "/v1/vat/RU1234567890"

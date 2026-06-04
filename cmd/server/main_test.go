@@ -26,12 +26,13 @@ func TestE2E_Health(t *testing.T) {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
 
-	var body map[string]string
+	var body map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if body["status"] != "ok" {
-		t.Errorf("status = %q, want ok", body["status"])
+	data := body["data"].(map[string]interface{})
+	if data["status"] != "ok" {
+		t.Errorf("status = %v, want ok", data["status"])
 	}
 }
 
@@ -55,8 +56,8 @@ func TestE2E_Version(t *testing.T) {
 	}
 
 	data := result["data"].(map[string]interface{})
-	if data["version"] != "0.7.0" {
-		t.Errorf("version = %v, want 0.7.0", data["version"])
+	if data["version"] != "0.8.0" {
+		t.Errorf("version = %v, want 0.8.0", data["version"])
 	}
 }
 
@@ -200,7 +201,7 @@ func createTestServer() *httptest.Server {
 			Address:     "TEST ADDRESS",
 		},
 	}
-	handler := infrastructure.NewHTTPHandler(vies, logger, "0.7.0")
+	handler := infrastructure.NewHTTPHandler(vies, logger, "0.8.0")
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/vat/{number}", handler.HandleVAT)
 	mux.HandleFunc("GET /v1/vies/{number}", handler.HandleVIES)

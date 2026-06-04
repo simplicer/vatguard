@@ -10,7 +10,7 @@ info:
 
     Supports all 27 EU member states, non-EU countries (GB, NO, CH, etc.),
     and full Spanish NIF/NIE check-digit validation per Ministerio del Interior.
-  version: 0.7.0
+  version: 0.8.0
   contact:
     name: Simplicer
     url: https://codeberg.org/simplicer
@@ -134,7 +134,7 @@ paths:
     get:
       tags: [health]
       summary: Health check
-      description: Returns service health status.
+      description: Returns service health status. Health is determined by the HTTP status code (200 = healthy).
       operationId: health
       responses:
         "200":
@@ -144,9 +144,15 @@ paths:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: string
-                    example: ok
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: ok
+              example:
+                data:
+                  status: ok
 
   /version:
     get:
@@ -167,10 +173,10 @@ paths:
                     properties:
                       version:
                         type: string
-                        example: "0.7.0"
+                        example: "0.8.0"
               example:
                 data:
-                  version: "0.7.0"
+                  version: "0.8.0"
 
 components:
   schemas:

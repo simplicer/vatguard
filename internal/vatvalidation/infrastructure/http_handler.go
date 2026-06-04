@@ -125,7 +125,15 @@ func (h *HTTPHandler) handleValidation(w http.ResponseWriter, r *http.Request, i
 
 // HandleHealth handles GET /health
 func (h *HTTPHandler) HandleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	writeJSON(w, http.StatusOK, struct {
+		Data struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}{
+		Data: struct {
+			Status string `json:"status"`
+		}{Status: "ok"},
+	})
 }
 
 // HandleVersion handles GET /version

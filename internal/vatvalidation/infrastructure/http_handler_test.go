@@ -13,7 +13,7 @@ import (
 )
 
 func newTestHandler(vies application.VIESChecker) *HTTPHandler {
-	return NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)), "0.7.0")
+	return NewHTTPHandler(vies, slog.New(slog.NewJSONHandler(io.Discard, nil)), "0.8.0")
 }
 
 func TestHandleVAT_Success_EU(t *testing.T) {
@@ -156,12 +156,16 @@ func TestHandleHealth(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 
-	var resp map[string]string
+	var resp map[string]interface{}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
-	if resp["status"] != "ok" {
-		t.Errorf("status = %q, want ok", resp["status"])
+	data, ok := resp["data"].(map[string]interface{})
+	if !ok {
+		t.Fatal("response should have data object")
+	}
+	if data["status"] != "ok" {
+		t.Errorf("status = %v, want ok", data["status"])
 	}
 }
 
@@ -190,8 +194,8 @@ func TestHandleVersion(t *testing.T) {
 	if !ok {
 		t.Fatal("response should have data object")
 	}
-	if data["version"] != "0.7.0" {
-		t.Errorf("version = %v, want 0.7.0", data["version"])
+	if data["version"] != "0.8.0" {
+		t.Errorf("version = %v, want 0.8.0", data["version"])
 	}
 }
 
@@ -224,7 +228,7 @@ func TestNewRouter_Routes(t *testing.T) {
 		result: &application.VIESResult{Valid: true},
 	}
 
-	router := NewRouter(vies, log, "0.7.0")
+	router := NewRouter(vies, log, "0.8.0")
 	server := httptest.NewServer(router)
 	defer server.Close()
 
